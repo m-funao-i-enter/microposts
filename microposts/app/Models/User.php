@@ -56,7 +56,7 @@ class User extends Authenticatable
      */
     public function loadRelationshipCounts()
     {
-        $this->loadCount(['microposts', 'followings', 'followers']);
+        $this->loadCount(['microposts', 'followings', 'followers', 'favorites']);
     }
     /**
      * このユーザーがフォロー中のユーザー。（Userモデルとの関係を定義）
@@ -134,5 +134,73 @@ class User extends Authenticatable
         $userIds[] = $this->id;
         // それらのユーザーが所有する投稿に絞り込む
         return Micropost::whereIn('user_id', $userIds);
+    }
+    
+    
+    
+    /**
+     * このユーザーがfavoriteした投稿。
+     */
+    public function favorites()
+    {
+        return $this->belongsToMany(Micropost::class, 'favorites', 'user_id', 'micropost_id')->withTimestamps();
+    }
+
+    /**
+     * $toFavoritesで指定された投稿をお気に入りする。
+     *
+     * @param  int  $toFavorites
+     * @return bool
+     */
+    public function favorite(int $favoriteId)
+    {
+        $exist = $this->is_favorite($favoriteId);
+        if($exist){
+            return false;
+        }
+        else{
+            $this->favorites()->attach($favoriteId);
+            return true;
+        }
+    }
+    
+    /**
+     * $toFavoritesで指定された投稿をお気に入り解除する。
+     * 
+     * @param  int $FavoriteId
+     * @return bool
+     */
+    public function unfavorite(int $favoriteId)
+    {
+        $exist = $this->is_favorite($favoriteId);
+        if($exist){
+            $this->favorites()->detach($favoriteId);
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    
+    /**
+     * 指定された$toFavoritesの投稿がお気に入り登録済みか調べる。
+     * 
+     * @param  int $favoriteId
+     * @return bool
+     */
+    public function is_favorite(int $favoriteId)
+    {
+        return $this->favorites()->where('micropost_id', $favoriteId)->exists();
+    }
+    
+    /**
+     * このユーザーのお気に入りした投稿に絞り込む。
+     */
+    public function feed_favorites()
+    {
+        // このユーザーお気に入りした投稿を取得して配列にする
+        $toFavorites = $this->pluck('favorites')->toArray();
+        // それらのユーザーが所有する投稿に絞り込む
+        return Micropost::whereIn($favoriteId);
     }
 }
